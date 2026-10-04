@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="定期定額">
+<meta name="theme-color" content="#1b2a4a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<title>定期定額試算</title>
+<style>
+:root{--bg:#eef1f5;--ink:#1b2a4a;--sub:#5b6781;--card:#fff;--line:#d9dfe9;--up:#d6304a;--navy:#1b2a4a}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1626;--ink:#e8edf7;--sub:#9aa7c2;--card:#18213a;--line:#2a3555;--navy:#7f9cff}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+main{max-width:480px;margin:0 auto;min-height:100%;padding:calc(env(safe-area-inset-top,0px) + 24px) 20px calc(env(safe-area-inset-bottom,0px) + 24px)}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:.02em}
+.lead{margin:0 0 20px;color:var(--sub);font-size:14px}
+.result{background:var(--navy);color:#fff;border-radius:20px;padding:22px 20px}
+@media (prefers-color-scheme:dark){.result{color:#0f1626}}
+.result small{opacity:.8;font-size:13px}
+.big{font-size:38px;font-weight:700;margin:4px 0 14px;font-variant-numeric:tabular-nums}
+.row{display:flex;justify-content:space-between;font-size:14px;padding-top:8px;border-top:1px solid rgba(255,255,255,.25)}
+.row b{font-variant-numeric:tabular-nums}
+svg{display:block;width:100%;height:auto;margin:16px 0 4px}
+.field{margin-top:18px}
+.field label{display:flex;justify-content:space-between;font-size:14px;color:var(--sub);margin-bottom:6px}
+.field label b{color:var(--ink);font-size:16px;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--navy);height:32px}
+.note{margin-top:22px;font-size:12px;color:var(--sub);line-height:1.6}
+</style>
+</head>
+<body>
+<main>
+  <h1>定期定額試算</h1>
+  <p class="lead">每月固定投入，看看長期累積會變多少。</p>
+
+  <section class="result" aria-live="polite">
+    <small>預估期末資產</small>
+    <div class="big" id="fv">–</div>
+    <svg id="chart" viewBox="0 0 320 120" role="img" aria-label="資產成長圖"></svg>
+    <div class="row"><span>累積投入本金</span><b id="pr">–</b></div>
+    <div class="row"><span>預估獲利</span><b id="gain">–</b></div>
+  </section>
+
+  <div class="field"><label for="m">每月投入<b id="mv"></b></label>
+    <input id="m" type="range" min="1000" max="100000" step="1000" value="10000"></div>
+  <div class="field"><label for="r">年化報酬率<b id="rv"></b></label>
+    <input id="r" type="range" min="0" max="15" step="0.5" value="6"></div>
+  <div class="field"><label for="y">投資年數<b id="yv"></b></label>
+    <input id="y" type="range" min="1" max="40" step="1" value="20"></div>
+
+  <p class="note">以每月月初投入、月複利計算。報酬率為假設值，不代表實際績效，投資有風險。</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const nt=n=>"NT$ "+Math.round(n).toLocaleString("zh-TW");
+function fv(P,a,months){const r=a/100/12;return r===0?P*months:P*((Math.pow(1+r,months)-1)/r)*(1+r)}
+function update(){
+  const P=+$("m").value,a=+$("r").value,y=+$("y").value;
+  $("mv").textContent=nt(P);$("rv").textContent=a+"%";$("yv").textContent=y+" 年";
+  const end=fv(P,a,y*12),pr=P*y*12;
+  $("fv").textContent=nt(end);$("pr").textContent=nt(pr);$("gain").textContent=nt(end-pr);
+  const W=320,H=120,pad=6,max=end||1;
+  const pts=k=>Array.from({length:y+1},(_,i)=>{
+    const v=k==="v"?fv(P,a,i*12):P*i*12;
+    return [pad+(W-2*pad)*i/y,H-pad-(H-2*pad)*v/max]});
+  const line=p=>p.map(q=>q[0].toFixed(1)+","+q[1].toFixed(1)).join(" ");
+  const v=pts("v"),b=pts("p");
+  $("chart").innerHTML=
+   `<polygon points="${line(v)} ${W-pad},${H-pad} ${pad},${H-pad}" fill="#fff" opacity=".18"/>`+
+   `<polyline points="${line(v)}" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>`+
+   `<polyline points="${line(b)}" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="4 4" opacity=".7"/>`;
+}
+["m","r","y"].forEach(i=>$(i).addEventListener("input",update));
+update();
+</script>
+</body>
+</html>
